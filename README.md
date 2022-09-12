@@ -2,7 +2,7 @@
 
 ![capture](capture.png)
 
-flask (backend python) + svelte (frontend javascipr)
+flask (backend python) + svelte (frontend javascript)
 
 it take a lot of code and inspiration from the hlky fork https://github.com/sd-webui/stable-diffusion-webui
 
@@ -32,3 +32,6 @@ because I know you'll like some explanation
 
 ![architecture](architecture.png)
 
+## Reddit
+
+follow me on reddit for incredibles images ! https://www.reddit.com/user/croquelois/
