@@ -1,5 +1,7 @@
 # stable diffusion my UI
 
+![capture](capture.png)
+
 flask (backend python) + svelte (frontend javascipr)
 
 it take a lot of code and inspiration from the hlky fork https://github.com/sd-webui/stable-diffusion-webui
