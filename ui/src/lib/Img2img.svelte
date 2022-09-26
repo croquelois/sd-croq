@@ -1,24 +1,27 @@
 <script>
-  import ParametersCard1 from './ParametersCard1.svelte';
-  import ParametersCard2 from './ParametersCard2.svelte';
+  import Prompt from './Prompt.svelte';
+  import ParametersCard from './ParametersCard.svelte';
+  import ParametersCardImg2Img from './ParametersCardImg2Img.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
   import { params } from './paramsStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
   
   let prompt = "";
+  let negativePrompt = "";
   let width = 512;
   let height = 512;
-  let classifierStrength = 7.5;
+  let classifierStrength = 12;
+  let subseedStrength = 0.0;
   let seed = null;
+  let subseed = null;
   let nbImages = 1;
-  
   let samplingSteps = 20;
   let samplingMethod = "DDIM";
+  let restoreFaces = false;
+  let tiling = false;
+  
   let denoiserStrength = 0.63;
-  let denoiserStrengthFactor = 0.50;
-  let nbLoopback = 0;
-  let saveLoopback = false;
   
   let inputImageUrl = null;
   let images = [];
@@ -35,12 +38,14 @@
   }
   
   function getAllParams(){
-    return {prompt, width, height, classifierStrength, seed, nbImages, samplingSteps, samplingMethod, denoiserStrength, denoiserStrengthFactor, nbLoopback, saveLoopback};
+    return {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling, denoiserStrength};
   }
   
   function setAllParams(p){
     if(p.prompt)
       prompt = p.prompt;
+    if(p.negativePrompt)
+      negativePrompt = p.negativePrompt;
     if(p.width)
       width = p.width;
     if(p.height)
@@ -49,22 +54,24 @@
       classifierStrength = p.classifierStrength;
     if(p.seed)
       seed = p.seed;
+    if(p.subseed)
+      subseed = p.subseed;
+    if(p.subseedStrength)
+      subseedStrength = p.subseedStrength;
     if(p.nbImages)
       nbImages = p.nbImages;
     if(p.samplingSteps)
       samplingSteps = p.samplingSteps;
     if(p.samplingMethod)
       samplingMethod = p.samplingMethod;
+    if(p.restoreFaces)
+      restoreFaces = p.restoreFaces;
+    if(p.tiling)
+      tiling = p.tiling;
     if(p.denoiserStrength)
       denoiserStrength = p.denoiserStrength;
-    if(p.denoiserStrengthFactor)
-      denoiserStrengthFactor = p.denoiserStrengthFactor;
     if(p.inputImageUrl)
       inputImageUrl = p.inputImageUrl;
-    if(p.nbLoopback)
-      nbLoopback = p.nbLoopback;
-    if(p.saveLoopback)
-      saveLoopback = p.saveLoopback;
   }
   params.subscribe(setAllParams);
   
@@ -75,7 +82,7 @@
       actionText = "Cancel";
       let resImage = await fetch(inputImageUrl);
       let image = await resImage.blob();
-      let res = await generate(getAllParams(), image, feedback);
+      let res = await generate(getAllParams(), image, null, feedback);
       images = res.images || [];
       if (res.opt && res.opt.seed !== undefined && res.opt.seed !== null) {
         if (res.opt.nbLoopback > 0 && res.opt.saveLoopback == true) {
@@ -125,16 +132,11 @@
 </script>
 
 <div class="container text-center">
-  <div class="row align-items-start g-0">
-    <div class="card" style="align-items: normal">
-      <div class="card-body">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="Enter your prompt here" bind:value={prompt}>
-          <button class="btn btn-primary" type="button" disabled={actionDisabled || !inputImageUrl} on:click={action}>{actionText}</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <Prompt 
+    bind:prompt={prompt} 
+    bind:negativePrompt={negativePrompt}
+    bind:actionText={actionText} actionDisabled={actionDisabled|| !inputImageUrl} on:action={action} 
+  />
   <div class="row align-items-start g-0">
     <div class="col">
       <div class="card">
@@ -167,31 +169,32 @@
             <Images images={images} seeds={seeds}/>
           {/if}
         </div>
-        <JobStatus status={jobStatus} />
       </div>
     </div>
   </div>
     
   <div class="row align-items-start g-0">
     <div class="col">
-      <ParametersCard1 
+      <ParametersCard 
         bind:width={width} 
         bind:height={height} 
         bind:classifierStrength={classifierStrength} 
         bind:seed={seed}
+        bind:subseed={subseed}
+        bind:subseedStrength={subseedStrength}
         bind:nbImages={nbImages}
+        bind:samplingSteps={samplingSteps} 
+        bind:samplingMethod={samplingMethod}
+        bind:restoreFaces={restoreFaces}
+        bind:tiling={tiling}
       />
     </div>
     
     <div class="col">
-      <ParametersCard2 
-        bind:samplingSteps={samplingSteps} 
-        bind:samplingMethod={samplingMethod} 
-        bind:denoiserStrength={denoiserStrength} 
-        bind:denoiserStrengthFactor={denoiserStrengthFactor}
-        bind:nbLoopback={nbLoopback}
-        bind:saveLoopback={saveLoopback}
+      <ParametersCardImg2Img
+        bind:denoiserStrength={denoiserStrength}
       />
+      <JobStatus status={jobStatus} />
     </div>
   </div>
 </div>

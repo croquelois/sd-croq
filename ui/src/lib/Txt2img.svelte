@@ -1,28 +1,30 @@
 <script>
-  import ParametersCard1 from './ParametersCard1.svelte';
-  import ParametersCard2 from './ParametersCard2.svelte';
+  import Prompt from './Prompt.svelte';
+  import ParametersCard from './ParametersCard.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
   import { params } from './paramsStore.js';
+  import { historyStore } from './historyStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
   
   
   let prompt = "";
+  let negativePrompt = "";
   let width = 512;
   let height = 512;
-  let classifierStrength = 7.5;
+  let classifierStrength = 12;
+  let subseedStrength = 0.0;
   let seed = null;
+  let subseed = null;
   let nbImages = 1;
-  
   let samplingSteps = 20;
   let samplingMethod = "DDIM";
-  let denoiserStrength = 0.63;
-  let denoiserStrengthFactor = 0.50;
-  let nbLoopback = 0;
-  let saveLoopback = false;
+  let restoreFaces = false;
+  let tiling = false;
   
   let images = [];
   let seeds = null;
+  let details = [];
   
   let actionText = "Generate";
   let actionDisabled = false;
@@ -35,7 +37,8 @@
   }
   
   function getAllParams(){
-    return {prompt, width, height, classifierStrength, seed, nbImages, samplingSteps, samplingMethod, denoiserStrength, denoiserStrengthFactor, nbLoopback, saveLoopback};
+    console.log(typeof samplingSteps);
+    return {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling};
   }
   
   async function action(){
@@ -43,7 +46,7 @@
       jobStatus = {status:"Starting"};
       waitImage = "working.png";
       actionText = "Cancel";
-      let res = await generate(getAllParams(), null, feedback);
+      let res = await generate(getAllParams(), null, null, feedback);
       images = res.images || [];
       console.log(res);
       console.log(res.opt);
@@ -71,54 +74,107 @@
     params.set(p);
     window.location.hash = event.detail.where;
   }
+  
+  function save(event){
+    let p = getAllParams();
+    p.seed = event.detail.seed;
+    p.url = event.detail.image;
+    historyStore.append(p);
+    window.location.hash = "history";
+  }
+  
+  let nbQueued = 0;
+  
+  async function regenerateImage(event){
+    if (actionText != "Generate")
+      return;
+    let url = event.target ? event.target.dataset.url : event.detail;
+    let pos = images.findIndex(img => img == url);
+    if(pos == -1)
+      return;
+    let p = getAllParams();
+    p.seed = seeds[pos];
+    p.nbImages = 1;
+    jobStatus = {status:"Starting"};
+    waitImage = "working.png";
+    actionText = "Cancel";
+    let res = await generate(p, null, null, feedback);
+    if(res.images && res.images.length == 1)
+      images[pos] = res.images[0];
+    waitImage = res.status == "error" ? "error.png" : null;
+    actionDisabled = false;
+    actionText = "Generate";
+    jobStatus = null;
+  }
+  
+  let viewModeName = "Carousel";
+  function onViewMode(){
+    if(viewModeName == "Carousel")
+      viewModeName = "Grid";
+    else
+      viewModeName = "Carousel";
+  }
 </script>
 
 <div class="container text-center">
-  <div class="row align-items-start g-0">
-    <div class="card" style="align-items: normal">
-      <div class="card-body">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="Enter your prompt here" bind:value={prompt}>
-          <button class="btn btn-primary" type="button" disabled={actionDisabled} on:click={action}>{actionText}</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <Prompt 
+    bind:prompt={prompt} 
+    bind:negativePrompt={negativePrompt}
+    bind:actionText={actionText} bind:actionDisabled={actionDisabled} on:action={action} 
+  />
+          
   <div class="row align-items-start g-0">
     <div class="col">
-      <ParametersCard1 
+      <ParametersCard 
         bind:width={width} 
         bind:height={height} 
         bind:classifierStrength={classifierStrength} 
         bind:seed={seed}
+        bind:subseed={subseed}
+        bind:subseedStrength={subseedStrength}
         bind:nbImages={nbImages}
-      />
-      <ParametersCard2 
         bind:samplingSteps={samplingSteps} 
-        bind:samplingMethod={samplingMethod} 
-        bind:denoiserStrength={denoiserStrength} 
-        bind:denoiserStrengthFactor={denoiserStrengthFactor}
-        bind:nbLoopback={nbLoopback}
-        bind:saveLoopback={saveLoopback}
+        bind:samplingMethod={samplingMethod}
+        bind:restoreFaces={restoreFaces}
+        bind:tiling={tiling}
       />
-      <JobStatus status={jobStatus} />
+
+      <JobStatus status={jobStatus} nbQueued={nbQueued} />
     </div>
     
     <div class="col">
       <div class="card">
         <div class="card-body">
-          {#if waitImage}
-            <img src={waitImage}>
+          {#if waitImage || viewModeName == "Grid"}
+            <img src={waitImage || "success.png"}>
           {:else}
-            <Images images={images} seeds={seeds} on:send={send}/>
+            <Images images={images} seeds={seeds} on:send={send} on:save={save} on:regenerate={regenerateImage} hasRegenerate=true />
           {/if}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <button type="button" class="btn btn-info" on:click={onViewMode}>Mode: {viewModeName}</button>
         </div>
       </div>
     </div>
   </div>
+  
+  {#if viewModeName == "Grid"}
+    <div class="d-flex flex-wrap">
+      {#each images as url (url)}
+        <div>
+          <img src={url} class="img-fluid rounded" style="height: 196px" data-url={url} on:click={regenerateImage}>
+        </div>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
+  .card-body {
+    padding: 0
+  }
   .card {
     align-items: center;
   }

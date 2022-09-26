@@ -6,8 +6,11 @@
   const dispatch = createEventDispatcher();
   export let images = [];
   export let seeds = null;
+  export let hasRegenerate = false;
+  
   let width = 512;
   let current = 0;
+  let alreadySaved = false;
   let myCarousel;
   let carouselId = newUniqueId();
   onMount(function(){
@@ -15,13 +18,24 @@
       return;
     myCarousel.addEventListener('slide.bs.carousel', event => {
       current = event.to;
+      alreadySaved = false;
     });
   });
   function copySeed(){
     navigator.clipboard.writeText(seeds[current]);
   }
+  function onRegenerate(event){
+    dispatch('regenerate', images[current]);
+  }
   function sendToImg2Img(){
     dispatch('send', {where: "img2img", image: images[current], seed: seeds && seeds[current]});
+  }
+  function sendToCanvas(){
+    dispatch('send', {where: "canvas", image: images[current], seed: seeds && seeds[current]});
+  }
+  function save(){
+    alreadySaved = true;
+    dispatch('save', {image: images[current], seed: seeds && seeds[current]});
   }
   function onLoad(event){
     let newWidth = event.currentTarget.clientWidth;
@@ -55,8 +69,15 @@
       <span class="visually-hidden">Next</span>
     </button>
   </div>
-  {#if seeds}
-    <button type="button" class="btn btn-success mt-1" on:click={copySeed}>Copy Seed</button>
-  {/if}
-  <button type="button" class="btn btn-success mt-1" on:click={sendToImg2Img}>Send to img2img</button>
+  <div class="btn-group mt-1" role="group">
+    {#if seeds}
+      <button type="button" class="btn btn-outline-primary" on:click={copySeed}>Copy Seed</button>
+    {/if}
+    {#if hasRegenerate}
+      <button type="button" class="btn btn-outline-primary" on:click={onRegenerate}>Regenerate</button>
+    {/if}
+    <button type="button" class="btn btn-outline-primary" on:click={sendToImg2Img}>To img2img</button>
+    <button type="button" class="btn btn-outline-primary" on:click={sendToCanvas}>To canvas</button>
+    <button type="button" class="btn btn-outline-primary" disabled={alreadySaved} on:click={save}>To history</button>
+  </div>
 {/if}

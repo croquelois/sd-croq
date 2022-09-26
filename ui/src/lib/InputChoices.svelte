@@ -4,7 +4,7 @@
   export let choices = [];
 </script>
 
-<div class="input-group mb-3">
+<div class="input-group">
   <span class="input-group-text">{title}</span>
   <select class="form-select" bind:value={value} >
     {#each choices as choice (choice)}

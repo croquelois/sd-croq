@@ -3,9 +3,10 @@
   import Txt2img from './lib/Txt2img.svelte';
   import Img2img from './lib/Img2img.svelte';
   import Canvas from './lib/Canvas.svelte';
+  import Lab from './lib/Lab.svelte';
   import History from './lib/History.svelte';
   
-  let tabs = ["txt2img", "img2img", "canvas", "history"];
+  let tabs = ["txt2img", "img2img", "canvas", "lab", "history"];
   
   let tab = "txt2img";
   function routeTab(){
@@ -42,6 +43,9 @@
     </div>
     <div class="tab-pane fade" class:show={tab == "img2img"} class:active={tab == "img2img"} role="tabpanel" tabindex="1">
       <Img2img />
+    </div>
+    <div class="tab-pane fade" class:show={tab == "lab"} class:active={tab == "lab"} role="tabpanel" tabindex="2">
+      <Lab />
     </div>
     <div class="tab-pane fade" class:show={tab == "canvas"} class:active={tab == "canvas"} role="tabpanel" tabindex="2">
       <Canvas />

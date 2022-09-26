@@ -18,7 +18,7 @@
   }
 </script>
 
-<div class="input-group mb-3">
+<div class="input-group">
   <span class="input-group-text">{title}</span>
   <input type="text" class="form-control" bind:value={value} on:change={change}>
 </div>
