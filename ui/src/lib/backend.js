@@ -35,6 +35,8 @@ function promiseOnAjaxReturn(xhr){
 function addBackendUrlToResponse(res){
   if(res.images)
     res.images = res.images.map(addBackendUrl);
+  if(res.video)
+    res.video = addBackendUrl(res.video);
   return res;
 }
 
@@ -60,6 +62,14 @@ export async function img2img(data, image, mask){
 export async function txt2img(data){
   const xhr = new XMLHttpRequest();
   xhr.open("POST", backendUrl+"/txt2img");
+  xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+  xhr.send(JSON.stringify(data));
+  return addBackendUrlToResponse(await promiseOnAjaxReturn(xhr));
+}
+
+export async function interpolate(data){
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", backendUrl+"/interpolate");
   xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
   xhr.send(JSON.stringify(data));
   return addBackendUrlToResponse(await promiseOnAjaxReturn(xhr));

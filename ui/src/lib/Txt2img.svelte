@@ -5,7 +5,8 @@
   import Images from './Images.svelte';
   import { params } from './paramsStore.js';
   import { historyStore } from './historyStore.js';
-  import {generate, cancelRequest} from './backendLogic.js'
+  import {generate, interpolateRequest, cancelRequest} from './backendLogic.js'
+  import InputText from './InputText.svelte';
   
   
   let prompt = "";
@@ -25,6 +26,7 @@
   let images = [];
   let seeds = null;
   let details = [];
+  let video = null;
   
   let actionText = "Generate";
   let actionDisabled = false;
@@ -114,6 +116,7 @@
     else
       viewModeName = "Carousel";
   }
+  
 </script>
 
 <div class="container text-center">
@@ -138,7 +141,7 @@
         bind:restoreFaces={restoreFaces}
         bind:tiling={tiling}
       />
-
+      
       <JobStatus status={jobStatus} nbQueued={nbQueued} />
     </div>
     

@@ -1,12 +1,9 @@
 import random
 
 def seed_to_int(s):
-    print(s)
     if type(s) is int:
-        print("int")
         return s
     if s is None or s == '':
-        print("null")
         return random.randint(0, 2**32 - 1)
     n = abs(int(s) if s.isdigit() else random.Random(s).randint(0, 2**32 - 1))
     while n >= 2**32:
@@ -16,6 +13,8 @@ def seed_to_int(s):
 class ProcessOptions:
     def __init__(self, json = {}):
         self.prompt = json.get("prompt", "") # F+B
+        self.prompt2 = json.get("prompt2", "") # F+B
+        self.prompt2_strength = json.get("prompt2Strength", 0) # F+B
         self.negative_prompt = json.get("negativePrompt", "") # F+B
         self.prompt_style = json.get("promptStyle", "") # B
         self.prompt_style2 = json.get("promptStyle2", "") # B
@@ -44,5 +43,6 @@ class ProcessOptions:
         self.inpaint_mask = json.get("inpaintMask", True) # B
         self.denoiserStrengthFactor = json.get("denoiserStrengthFactor", 0.5) # F
         self.nbLoopback = json.get("nbLoopback", 0)  # F
+        self.interpolate_by = json.get("interpolateBy", None)
         
     

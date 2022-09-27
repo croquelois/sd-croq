@@ -46,7 +46,7 @@ def faceCorrection():
     response = {'action': 'faceCorrection', 'status': 'pending', 'id': str(uuid.uuid4())};
     add_request_to_queue(response, image)
     return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
-    
+
 @app.route('/interrogate', methods=['POST'])
 @cross_origin()
 def interrogate():
@@ -54,6 +54,17 @@ def interrogate():
     image.load()
     response = {'action': 'interrogate', 'status': 'pending', 'id': str(uuid.uuid4())};
     add_request_to_queue(response, image)
+    return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
+
+@app.route('/interpolate', methods=['POST'])
+@cross_origin()
+def interpolate():
+    opt = request.json
+    print(jsonpickle.encode(opt))
+    nb_img = opt["nbImages"]
+    nb_keys = len(opt["steps"])
+    response = {'action': 'interpolate', 'status': 'pending', 'i': 0, 'nb': (1+(nb_img-1)*(nb_keys-1)), 'id': str(uuid.uuid4()), 'opt': opt};
+    add_request_to_queue(response)
     return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
 
 ## QUEUE

@@ -1,4 +1,4 @@
-import {txt2img, img2img, checkResult, faceCorrection, upscale, interrogate, cancel} from './backend.js';
+import {txt2img, img2img, checkResult, faceCorrection, upscale, interrogate, interpolate, cancel} from './backend.js';
 import {sleep} from './utils.js'
 
 let cancelling = false;
@@ -30,6 +30,16 @@ export async function generate(opt, image, mask, feedback){
     res = await img2img(opt, image, mask);
   else
     res = await txt2img(opt);
+  if(res.status == "error"){
+    console.log(res);
+    return res;
+  }
+  return await activeWaitLoop(res.id, feedback);
+}
+
+export async function interpolateRequest(opt, feedback){
+  console.log("interpolate", opt);
+  let res = await interpolate(opt);
   if(res.status == "error"){
     console.log(res);
     return res;

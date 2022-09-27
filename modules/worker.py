@@ -2,6 +2,7 @@ import uuid
 import threading, queue, json
 import argparse, os, sys, glob, time, traceback
 import PIL
+import cv2
 import torch
 import accelerate
 import torch.nn as nn
@@ -11,7 +12,7 @@ from PIL import Image, ImageFilter, ImageOps, ImageChops
 
 from modules.devices import torch_gc
 from modules import random_utils, UserDatabase, ProcessOptions, shared, sd_models, misc, gfpgan_model
-from modules.ProcessOptions import ProcessOptions
+from modules.ProcessOptions import ProcessOptions, seed_to_int
 from modules.shared import opts as globalOpts, cmd_opts
 from modules.processing import StableDiffusionProcessing, Processed, StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img, process_images
 from modules.sd_samplers import samplers, samplers_for_img2img
@@ -40,8 +41,83 @@ def saveImage(image):
     filename = str(uuid.uuid4()) + ".png"
     image.save(os.path.join(shared.cmd_opts.image_path, filename))
     return filename
+    
+def saveVideo(images, frameRate, size):
+    filename = str(uuid.uuid4()) + ".webm"
+    out = cv2.VideoWriter(os.path.join(shared.cmd_opts.image_path, filename), cv2.VideoWriter_fourcc(*'VP80'), frameRate, size)
+    for img in images:
+        out.write(np.array(img)[:, :, ::-1])
+    out.release()
+    return filename
+
 
 def start_worker():
+    def process_interpolate(item):
+        opt = item["opt"]
+        firstStep = opt["steps"][0]
+        
+        firstStep["seed"] = seed_to_int(firstStep["seed"])
+        p = StableDiffusionProcessingTxt2Img(
+            sd_model=shared.sd_model,
+            prompt=firstStep["prompt"],
+            seed=firstStep["seed"],
+            sampler_index=getSamplerIndex(opt["samplingMethod"]),
+            batch_size=1,
+            n_iter=1,
+            steps=opt["samplingSteps"],
+            cfg_scale=opt["classifierStrength"],
+            width=opt["width"],
+            height=opt["height"],
+            tiling=opt["tiling"],
+        )
+        processed = process_images(p)
+        shared.total_tqdm.clear()
+        images = [processed.images[0]]
+                
+        prevStep = None
+        for step in opt["steps"]:
+            if not prevStep:
+                prevStep = step
+                continue
+            if not step["seed"]:
+                step["seed"] = prevStep["seed"]
+            else:
+                step["seed"] = seed_to_int(step["seed"])
+            if not step["prompt"]:
+                step["prompt"] = prevStep["prompt"]
+            
+            for i in range(1,opt["nbImages"]):
+                a = i/(opt["nbImages"]-1)
+                p = StableDiffusionProcessingTxt2Img(
+                    sd_model=shared.sd_model,
+                    outpath_samples=globalOpts.outdir_samples or globalOpts.outdir_txt2img_samples,
+                    outpath_grids=globalOpts.outdir_grids or globalOpts.outdir_txt2img_grids,
+                    prompt=prevStep["prompt"],
+                    prompt2=step["prompt"],
+                    prompt2_strength=a,
+                    styles=[],
+                    negative_prompt="",
+                    seed=prevStep["seed"],
+                    subseed=step["seed"],
+                    subseed_strength=a,
+                    seed_resize_from_h=0,
+                    seed_resize_from_w=0,
+                    sampler_index=getSamplerIndex(opt["samplingMethod"]),
+                    batch_size=1,
+                    n_iter=1,
+                    steps=opt["samplingSteps"],
+                    cfg_scale=opt["classifierStrength"],
+                    width=opt["width"],
+                    height=opt["height"],
+                    restore_faces=False,
+                    tiling=opt["tiling"],
+                )
+                processed = process_images(p)
+                shared.total_tqdm.clear()
+                images.append(processed.images[0])
+
+        return saveVideo(images, 15, (p.width,p.height))
+        
     def process_txt2img(item):
         opt = item["opt"]
         p = StableDiffusionProcessingTxt2Img(
@@ -66,7 +142,6 @@ def start_worker():
             restore_faces=opt.restore_faces,
             tiling=opt.tiling,
         )
-        print(p.restore_faces)
         processed = process_images(p)
         shared.total_tqdm.clear()
         print(processed.js())
@@ -165,22 +240,22 @@ def start_worker():
                 item["status"] = "processing"
                 images = None
                 prompt = None
+                video = None
                 if item["action"] == "interrogate":
                     shared.state.job_count = 1;
-                    prompt = [process_interrogate(image)]
+                    item["prompt"] = [process_interrogate(image)]
                 elif item["action"] == "faceCorrection":
                     shared.state.job_count = 1;
-                    images = [process_face_correction(image)]
+                    item["images"] = [process_face_correction(image)]
                 elif item["action"] == "img2img":
                     shared.state.job_count = item["opt"].n_iter;
-                    images = process_img2img(item, image, mask)
+                    item["images"] = process_img2img(item, image, mask)
+                elif item["action"] == "interpolate":
+                    shared.state.job_count = item["opt"]["nbImages"]*(len(item["opt"]["steps"])-1);
+                    item["video"] = process_interpolate(item)
                 else:
                     shared.state.job_count = item["opt"].n_iter;
-                    images = process_txt2img(item)
-                if images:
-                    item["images"] = images
-                if prompt:
-                    item["prompt"] = prompt
+                    item["images"] = process_txt2img(item)
                 if(item["status"] == "cancelling"):
                     item["status"] = "cancelled"
                 else:

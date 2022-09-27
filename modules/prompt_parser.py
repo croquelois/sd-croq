@@ -85,6 +85,11 @@ def get_learned_conditioning_prompt_schedules(prompts, steps):
 ScheduledPromptConditioning = namedtuple("ScheduledPromptConditioning", ["end_at_step", "cond"])
 ScheduledPromptBatch = namedtuple("ScheduledPromptBatch", ["shape", "schedules"])
 
+def interpolate_schedule(c1, c2, a):
+    cond1 = c1.schedules[0][0].cond
+    cond2 = c2.schedules[0][0].cond
+    cond = torch.add(torch.mul(cond1, (1-a)), torch.mul(cond2, a))
+    return ScheduledPromptBatch(c1.shape, [[ScheduledPromptConditioning(c1.schedules[0][0].end_at_step, cond)]])
 
 def get_learned_conditioning(prompts, steps):
 

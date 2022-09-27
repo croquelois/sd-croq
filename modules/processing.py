@@ -49,11 +49,13 @@ def apply_color_correction(correction, image):
 
 
 class StableDiffusionProcessing:
-    def __init__(self, sd_model=None, outpath_samples=None, outpath_grids=None, prompt="", styles=None, seed=-1, subseed=-1, subseed_strength=0, seed_resize_from_h=-1, seed_resize_from_w=-1, seed_enable_extras=True, sampler_index=0, batch_size=1, n_iter=1, steps=50, cfg_scale=7.0, width=512, height=512, restore_faces=False, tiling=False, do_not_save_samples=False, do_not_save_grid=False, extra_generation_params=None, overlay_images=None, negative_prompt=None):
+    def __init__(self, sd_model=None, outpath_samples=None, outpath_grids=None, prompt="", styles=None, seed=-1, subseed=-1, subseed_strength=0, seed_resize_from_h=-1, seed_resize_from_w=-1, seed_enable_extras=True, sampler_index=0, batch_size=1, n_iter=1, steps=50, cfg_scale=7.0, width=512, height=512, restore_faces=False, tiling=False, do_not_save_samples=False, do_not_save_grid=False, extra_generation_params=None, overlay_images=None, negative_prompt=None, prompt2=None, prompt2_strength=0):
         self.sd_model = sd_model
         self.outpath_samples: str = outpath_samples
         self.outpath_grids: str = outpath_grids
         self.prompt: str = prompt
+        self.prompt2: str = prompt2
+        self.prompt2_strength: float = prompt2_strength
         self.prompt_for_display: str = None
         self.negative_prompt: str = (negative_prompt or "")
         self.styles: str = styles
@@ -96,6 +98,8 @@ class Processed:
     def __init__(self, p: StableDiffusionProcessing, images_list, seed=-1, info="", subseed=None, all_prompts=None, all_seeds=None, all_subseeds=None, index_of_first_image=0):
         self.images = images_list
         self.prompt = p.prompt
+        self.prompt2 = None
+        self.prompt2_strength = 0
         self.negative_prompt = p.negative_prompt
         self.seed = seed
         self.subseed = subseed
@@ -277,20 +281,30 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
     devices.torch_gc()
 
     fix_seed(p)
-
-    os.makedirs(p.outpath_samples, exist_ok=True)
-    os.makedirs(p.outpath_grids, exist_ok=True)
+    
+    if p.outpath_samples:
+        os.makedirs(p.outpath_samples, exist_ok=True)
+    if p.outpath_grids:
+        os.makedirs(p.outpath_grids, exist_ok=True)
 
     modules.sd_hijack.model_hijack.apply_circular(p.tiling)
 
     comments = {}
 
-    shared.prompt_styles.apply_styles(p)
+    if p.styles:
+        shared.prompt_styles.apply_styles(p)
 
     if type(p.prompt) == list:
         all_prompts = p.prompt
     else:
         all_prompts = p.batch_size * p.n_iter * [p.prompt]
+        
+    if type(p.prompt2) == list:
+        all_prompts2 = p.prompt2
+    elif not p.prompt2:
+        all_prompts2 = None
+    else:
+        all_prompts2 = p.batch_size * p.n_iter * [p.prompt2]
 
     if type(p.seed) == list:
         all_seeds = p.seed
@@ -322,6 +336,8 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 break
 
             prompts = all_prompts[n * p.batch_size:(n + 1) * p.batch_size]
+            if all_prompts2:
+                prompts2 = all_prompts2[n * p.batch_size:(n + 1) * p.batch_size]
             seeds = all_seeds[n * p.batch_size:(n + 1) * p.batch_size]
             subseeds = all_subseeds[n * p.batch_size:(n + 1) * p.batch_size]
 
@@ -332,7 +348,12 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             #c = p.sd_model.get_learned_conditioning(prompts)
             uc = prompt_parser.get_learned_conditioning(len(prompts) * [p.negative_prompt], p.steps)
             c = prompt_parser.get_learned_conditioning(prompts, p.steps)
-
+            
+            if all_prompts2:
+                print(f"interpolating between prompts with strengh: {prompts} {p.prompt2_strength} {prompts2}")
+                c2 = prompt_parser.get_learned_conditioning(prompts2, p.steps)
+                c = prompt_parser.interpolate_schedule(c, c2, p.prompt2_strength)
+            
             if len(model_hijack.comments) > 0:
                 for comment in model_hijack.comments:
                     comments[comment] = 1

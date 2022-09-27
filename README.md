@@ -42,9 +42,18 @@ this stuff broke all the time, I'm tinkering
 
 - txt2img: you enter a prompt (with all the power of Automatic1111: negative, weighted, etc...)
 - img2img: you enter a prompt and an image
+- interpolation: create video of interpolated prompt (between seed and prompt)
 - canvas: it's a bit a wild experimental place here, don't go inside this madness
 - lab: fix faces, upscale, img2txt
 - history: save your favorites creation and all their parameters
+
+## Interpolation
+
+![interpolation tab](interpolation.png)
+
+## History
+
+![history](history.png)
 
 ## Architecture diagram
 

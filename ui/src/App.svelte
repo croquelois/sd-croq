@@ -5,8 +5,9 @@
   import Canvas from './lib/Canvas.svelte';
   import Lab from './lib/Lab.svelte';
   import History from './lib/History.svelte';
+  import Interpolator from './lib/Interpolator.svelte';
   
-  let tabs = ["txt2img", "img2img", "canvas", "lab", "history"];
+  let tabs = ["txt2img", "img2img", "interpolator", "canvas", "lab", "history"];
   
   let tab = "txt2img";
   function routeTab(){
@@ -44,11 +45,14 @@
     <div class="tab-pane fade" class:show={tab == "img2img"} class:active={tab == "img2img"} role="tabpanel" tabindex="1">
       <Img2img />
     </div>
-    <div class="tab-pane fade" class:show={tab == "lab"} class:active={tab == "lab"} role="tabpanel" tabindex="2">
-      <Lab />
+    <div class="tab-pane fade" class:show={tab == "interpolator"} class:active={tab == "interpolator"} role="tabpanel" tabindex="2">
+      <Interpolator />
     </div>
     <div class="tab-pane fade" class:show={tab == "canvas"} class:active={tab == "canvas"} role="tabpanel" tabindex="2">
       <Canvas />
+    </div>
+    <div class="tab-pane fade" class:show={tab == "lab"} class:active={tab == "lab"} role="tabpanel" tabindex="2">
+      <Lab />
     </div>
     <div class="tab-pane fade" class:show={tab == "history"} class:active={tab == "history"} role="tabpanel" tabindex="3">
       <History />
