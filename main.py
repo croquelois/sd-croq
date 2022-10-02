@@ -63,7 +63,7 @@ def interpolate():
     print(jsonpickle.encode(opt))
     nb_img = opt["nbImages"]
     nb_keys = len(opt["steps"])
-    response = {'action': 'interpolate', 'status': 'pending', 'i': 0, 'nb': (1+(nb_img-1)*(nb_keys-1)), 'id': str(uuid.uuid4()), 'opt': opt};
+    response = {'action': 'interpolate', 'status': 'pending', 'i': 0, 'nb': (1+nb_img*(nb_keys-1)), 'id': str(uuid.uuid4()), 'opt': opt};
     add_request_to_queue(response)
     return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
 
@@ -92,6 +92,16 @@ def cancel(id):
 def dbAppend(user):
     data = UserDatabase.load(user)
     data.append(request.json)
+    UserDatabase.save(user, data)
+    return Response(response=jsonpickle.encode({'status': 'ok', 'data': data}), status=200, mimetype="application/json")
+
+@app.route('/db/<user>/<url>', methods=['POST'])
+@cross_origin()
+def dbUpdate(user, url):
+    data = UserDatabase.load(user)
+    for i,d in enumerate(data):
+        if d["url"] == url:
+            data[i] = request.json
     UserDatabase.save(user, data)
     return Response(response=jsonpickle.encode({'status': 'ok', 'data': data}), status=200, mimetype="application/json")
 

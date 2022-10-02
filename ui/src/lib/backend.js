@@ -12,7 +12,6 @@ function promiseOnAjaxReturn(xhr){
   return new Promise((res, rej) => {
     xhr.onreadystatechange = function() {
       if(xhr.readyState == 4){
-        console.log(xhr.status);
         if(xhr.status == 0)
           return res({status: "error", message:"unable to contact the backend"});
         if(xhr.status == 500) {
@@ -128,6 +127,15 @@ export async function dbUserAppend(user, data){
   const xhr = new XMLHttpRequest();
   data.url = removeBackendUrl(data.url);
   xhr.open("POST", backendUrl+"/db/"+user);
+  xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+  xhr.send(JSON.stringify(data));
+  return addBackendUrlToHistory(await promiseOnAjaxReturn(xhr));
+}
+
+export async function dbUserUpdate(user, data){
+  const xhr = new XMLHttpRequest();
+  data.url = removeBackendUrl(data.url);
+  xhr.open("POST", backendUrl+"/db/"+user+"/"+data.url);
   xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
   xhr.send(JSON.stringify(data));
   return addBackendUrlToHistory(await promiseOnAjaxReturn(xhr));

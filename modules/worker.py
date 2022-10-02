@@ -115,8 +115,9 @@ def start_worker():
                 processed = process_images(p)
                 shared.total_tqdm.clear()
                 images.append(processed.images[0])
+            prevStep = step
 
-        return saveVideo(images, 15, (p.width,p.height))
+        return saveVideo(images, opt.get("framesBySec",15), (p.width,p.height))
         
     def process_txt2img(item):
         opt = item["opt"]
@@ -142,6 +143,8 @@ def start_worker():
             restore_faces=opt.restore_faces,
             tiling=opt.tiling,
         )
+        p.perlin_strength = opt.perlin_strength
+        p.perlin_octave = opt.perlin_octave
         processed = process_images(p)
         shared.total_tqdm.clear()
         print(processed.js())
@@ -251,7 +254,7 @@ def start_worker():
                     shared.state.job_count = item["opt"].n_iter;
                     item["images"] = process_img2img(item, image, mask)
                 elif item["action"] == "interpolate":
-                    shared.state.job_count = item["opt"]["nbImages"]*(len(item["opt"]["steps"])-1);
+                    shared.state.job_count = 1+item["opt"]["nbImages"]*(len(item["opt"]["steps"])-1);
                     item["video"] = process_interpolate(item)
                 else:
                     shared.state.job_count = item["opt"].n_iter;

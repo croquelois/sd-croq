@@ -13,6 +13,9 @@
   let infoModalElement;
   let infoModal;
   let infoModalText;
+  let editModalElement;
+  let editModal;
+  let editModalText;
   
   let currentUrl = null;
   
@@ -25,6 +28,7 @@
     });
     transfertModal = new bootstrap.Modal(transfertModalElement, {});
     infoModal = new bootstrap.Modal(infoModalElement, {});
+    editModal = new bootstrap.Modal(editModalElement, {});
   });
   
   function refresh(){
@@ -38,6 +42,20 @@
     let info = history.find(h => h.url == url);
     infoModalText = JSON.stringify(info, "", 2);
     infoModal.show();
+  }
+  
+  
+  function onEdit(event){
+    currentUrl = event.target.dataset.url;
+    let h = history.find(h => h.url == currentUrl);
+    editModalText = h.title || "";
+    editModal.show();
+  }
+  function applyEdit(){
+    let h = history.find(h => h.url == currentUrl);
+    h.title = editModalText;
+    historyStore.update(h);
+    currentUrl = null;
   }
   
   function transfert(event){
@@ -71,6 +89,24 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary" on:click={applyTransfert} data-bs-dismiss="modal">Apply changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div bind:this={editModalElement} class="modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Change the title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <InputText title="title" bind:value={editModalText} />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" on:click={applyEdit} data-bs-dismiss="modal">Apply changes</button>
       </div>
     </div>
   </div>
@@ -115,9 +151,10 @@
               <div class="col-md-10">
                 <div class="card-body">
                   <div class="d-flex justify-content-between">
-                    <h5 class="card-title">{h.prompt}</h5>
+                    <h5 class="card-title">{h.title || h.prompt}</h5>
                     <div>
                       <button type="button" data-url={h.url} class="btn btn-sm btn-danger" on:click={deleteOne}><i class="bi-trash"></i></button>
+                      <button type="button" data-url={h.url} class="btn btn-sm btn-info" on:click={onEdit}><i class="bi-pencil-square"></i></button>
                       <button type="button" data-url={h.url} class="btn btn-sm btn-info" on:click={detail}><i class="bi-question-circle"></i></button>
                       <button type="button" data-url={h.url} class="btn btn-sm btn-info" on:click={transfert}><i class="bi-folder-symlink"></i></button>
                       <button type="button" data-url={h.url} class="btn btn-sm btn-info" on:click={backToOrigin}><i class="bi-arrow-return-left"></i></button>

@@ -44,5 +44,7 @@ class ProcessOptions:
         self.denoiserStrengthFactor = json.get("denoiserStrengthFactor", 0.5) # F
         self.nbLoopback = json.get("nbLoopback", 0)  # F
         self.interpolate_by = json.get("interpolateBy", None)
+        self.perlin_strength = json.get("perlinStrength", 0.0)
+        self.perlin_octave = json.get("perlinOctave", 12.0)
         
     

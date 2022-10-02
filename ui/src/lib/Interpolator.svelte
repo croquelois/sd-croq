@@ -27,6 +27,7 @@
   let steps = [];
   onAdd();
   let nbImages = 15;
+  let framesBySec = 15;
   
   function feedback(status){
     console.log("feedback", status);
@@ -38,7 +39,8 @@
       width, 
       height, 
       classifierStrength, 
-      nbImages, 
+      nbImages: parseInt(nbImages), 
+      framesBySec: parseInt(framesBySec),
       samplingSteps, 
       samplingMethod, 
       tiling,
@@ -103,13 +105,18 @@
 <div class="container text-center">
   <div class="card">
     <div class="card-body">
-      <InputNumber title="Number of frames between steps: " bind:value={nbImages} />
+      <div class="input-group">
+        <span class="input-group-text">Number of images:</span>
+        <input type="text" class="form-control" bind:value={nbImages}>
+        <span class="input-group-text">Frames by seconds:</span>
+        <input type="text" class="form-control" bind:value={framesBySec}>
+      </div>
       {#each steps as step (step.id)}
         <div class="input-group">
           <span class="input-group-text">Seed:</span>
-          <input type="text" class="form-control" size=10 bind:value={step.seed}>
+          <input type="text" class="form-control" bind:value={step.seed}>
           <span class="input-group-text">Prompt:</span>
-          <input type="text" class="form-control" bind:value={step.prompt} style="width: 70%">
+          <input type="text" class="form-control" bind:value={step.prompt} style="width: 60%">
           <button type="button" class="btn btn-outline-danger" data-id={step.id} on:click={onDelete}><i class="bi bi-trash"></i></button>
           <button type="button" class="btn btn-outline-secondary" data-id={step.id} on:click={onUp}><i class="bi bi-chevron-up"></i></button>
           <button type="button" class="btn btn-outline-secondary" data-id={step.id} on:click={onDown}><i class="bi bi-chevron-down"></i></button>

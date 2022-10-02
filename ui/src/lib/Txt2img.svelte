@@ -7,7 +7,10 @@
   import { historyStore } from './historyStore.js';
   import {generate, interpolateRequest, cancelRequest} from './backendLogic.js'
   import InputText from './InputText.svelte';
-  
+  import InputRange from './InputRange.svelte';
+  import ButtonOptions from './ButtonOptions.svelte';
+  import {shallowCopy} from './utils.js';
+  import {getDetailFromUrl, getAndlockDetail, unlockAndUpdateDetail} from './detailMgmtUtils.js';
   
   let prompt = "";
   let negativePrompt = "";
@@ -23,10 +26,14 @@
   let restoreFaces = false;
   let tiling = false;
   
-  let images = [];
-  let seeds = null;
+  // Experimental
+  let experimental = false
+  let perlinStrength = 0.0;
+  let perlinOctave = 6.0;
+  let perlinScale = 5.0;
+  // ************
+  
   let details = [];
-  let video = null;
   
   let actionText = "Generate";
   let actionDisabled = false;
@@ -34,13 +41,17 @@
   let jobStatus = null;
   
   function feedback(status){
-    console.log("feedback", status);
     jobStatus = status;
   }
   
   function getAllParams(){
-    console.log(typeof samplingSteps);
-    return {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling};
+    let p = {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling};
+    if(experimental){
+      p.perlinStrength = perlinStrength;
+      p.perlinOctave = perlinOctave;
+      p.perlinScale = perlinScale;
+    }
+    return p;
   }
   
   async function action(){
@@ -48,15 +59,18 @@
       jobStatus = {status:"Starting"};
       waitImage = "working.png";
       actionText = "Cancel";
-      let res = await generate(getAllParams(), null, null, feedback);
-      images = res.images || [];
-      console.log(res);
-      console.log(res.opt);
-      if(res.opt && res.opt.seed !== undefined && res.opt.seed !== null)
-        seeds = images.map((img,i) => res.opt.seed + i);
-      else
-        seeds = null;
-      console.log(seeds);
+      let params = getAllParams();
+      details = [];
+      let res = await generate(params, null, null, feedback);
+      if(res.images){
+        let initSeed = (res.opt && res.opt.seed);
+        details = res.images.map((image,i) => {
+          let p = shallowCopy(params);
+          if(initSeed != null)
+            p.seed = initSeed + i;
+          return {params: p, image};
+        });
+      }
       waitImage = res.status == "error" ? "error.png" : null;
       actionDisabled = false;
       actionText = "Generate";
@@ -69,18 +83,21 @@
     }
   }
   
-  function send(event){
-    let p = getAllParams();
-    p.seed = event.detail.seed;
-    p.inputImageUrl = event.detail.image;
+  function send(event, where){
+    let url = (typeof event == "string" ? event : event.detail.image);
+    where = where || event.detail.where;
+    let detail = getDetailFromUrl(details, url);
+    let p = shallowCopy(detail.params);
+    p.inputImageUrl = url;
     params.set(p);
-    window.location.hash = event.detail.where;
+    window.location.hash = where;
   }
   
   function save(event){
-    let p = getAllParams();
-    p.seed = event.detail.seed;
-    p.url = event.detail.image;
+    let url = (typeof event == "string" ? event : event.detail.image);
+    let detail = getDetailFromUrl(details, url);
+    let p = shallowCopy(detail.params);
+    p.url = url;
     historyStore.append(p);
     window.location.hash = "history";
   }
@@ -90,23 +107,28 @@
   async function regenerateImage(event){
     if (actionText != "Generate")
       return;
-    let url = event.target ? event.target.dataset.url : event.detail;
-    let pos = images.findIndex(img => img == url);
-    if(pos == -1)
+    let url = (typeof event == "string" ? event : event.detail.image);
+    let detail = getAndlockDetail(details, url);
+    if (!detail)
       return;
     let p = getAllParams();
-    p.seed = seeds[pos];
+    p.seed = detail.params.seed;
     p.nbImages = 1;
-    jobStatus = {status:"Starting"};
+    if(!jobStatus)
+      jobStatus = {status:"Starting"};
     waitImage = "working.png";
-    actionText = "Cancel";
+    nbQueued++;
     let res = await generate(p, null, null, feedback);
-    if(res.images && res.images.length == 1)
-      images[pos] = res.images[0];
-    waitImage = res.status == "error" ? "error.png" : null;
-    actionDisabled = false;
-    actionText = "Generate";
-    jobStatus = null;
+    if(res.images && res.images.length == 1){
+      details = unlockAndUpdateDetail(details, url, p, res.images[0]);
+    }else{
+      details = unlockAndUpdateDetail(details, url, null, null, "error");
+    }
+    nbQueued--;
+    if(nbQueued == 0){
+      waitImage = res.status == "error" ? "error.png" : null;
+      jobStatus = null;
+    }
   }
   
   let viewModeName = "Carousel";
@@ -117,13 +139,26 @@
       viewModeName = "Carousel";
   }
   
+  let optionsGridAction = ["Regenerate", "Fullscreen", "Send to img2img", "Send to history"];
+  let currentGridAction = optionsGridAction[0];
+  
+  function onGridAction(event){
+    let url = (event.target && event.target.dataset.url) || (event.detail && event.detail.image) || event;
+    if(currentGridAction == "Regenerate")
+      return regenerateImage(url);
+    if(currentGridAction == "Send to img2img")
+      return send(url, "img2img");
+    if(currentGridAction == "Send to history")
+      return save(url);
+  }
+  
 </script>
 
 <div class="container text-center">
   <Prompt 
     bind:prompt={prompt} 
     bind:negativePrompt={negativePrompt}
-    bind:actionText={actionText} bind:actionDisabled={actionDisabled} on:action={action} 
+    bind:actionText={actionText} actionDisabled={actionDisabled || nbQueued} on:action={action} 
   />
           
   <div class="row align-items-start g-0">
@@ -141,7 +176,11 @@
         bind:restoreFaces={restoreFaces}
         bind:tiling={tiling}
       />
-      
+      {#if experimental}
+        <InputNumber title="perlin strength" bind:value={perlinStrength} />
+        <InputNumber title="perlin octave" bind:value={perlinOctave} />
+        <InputNumber title="perlin scale" bind:value={perlinOctave} />
+      {/if}
       <JobStatus status={jobStatus} nbQueued={nbQueued} />
     </div>
     
@@ -151,8 +190,11 @@
           {#if waitImage || viewModeName == "Grid"}
             <img src={waitImage || "success.png"}>
           {:else}
-            <Images images={images} seeds={seeds} on:send={send} on:save={save} on:regenerate={regenerateImage} hasRegenerate=true />
+            <Images details={details} on:send={send} on:save={save} on:regenerate={regenerateImage}
+              actions={["copy seed", "regenerate", "to img2img", "to canvas", "history"]}
+            />
           {/if}
+          
         </div>
       </div>
       <div class="card">
@@ -164,10 +206,11 @@
   </div>
   
   {#if viewModeName == "Grid"}
+    <ButtonOptions bind:current={currentGridAction} options={optionsGridAction} />
     <div class="d-flex flex-wrap">
-      {#each images as url (url)}
+      {#each details as detail,pos (pos)}
         <div>
-          <img src={url} class="img-fluid rounded" style="height: 196px" data-url={url} on:click={regenerateImage}>
+          <img src={detail.image} class="img-fluid rounded" style="height: 196px" data-url={detail.image} on:click={onGridAction}>
         </div>
       {/each}
     </div>

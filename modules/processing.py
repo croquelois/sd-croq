@@ -22,6 +22,9 @@ import modules.images as images
 import modules.styles
 import logging
 
+from perlin_noise import PerlinNoise
+from modules.misc import studyTorchTensor
+
 
 # some of those options should not be changed at all because they would break the model, so I removed them from options.
 opt_C = 4
@@ -80,6 +83,9 @@ class StableDiffusionProcessing:
         self.paste_to = None
         self.color_corrections = None
         self.denoising_strength: float = 0
+        self.perlin_strength: float = 0
+        self.perlin_octave: float = 12
+        self.perlin_scale: float = 5
 
         if not seed_enable_extras:
             self.subseed = -1
@@ -178,6 +184,23 @@ def slerp(val, low, high):
     return res
 
 
+def perlin_from_shape(seed, shape, p):
+    perlin = PerlinNoise(octaves=p.perlin_octave, seed=seed)
+    (nl, nx, ny) = shape
+    noise = [[[p.perlin_scale*perlin([l/nl, x/nx, y/ny]) for y in range(ny)] for x in range(nx)] for l in range(nl)]
+    noise = torch.as_tensor(noise).to(shared.device)
+    #studyTorchTensor("perlin", noise)
+    return noise
+
+def random_generator(seed, shape, p):
+    r = devices.randn(seed, shape)
+    #studyTorchTensor("initial", r)
+    if p.perlin_strength > 0:
+        r *= (1-p.perlin_strength)
+        r += p.perlin_strength*perlin_from_shape(seed, shape, p)
+    #studyTorchTensor("blended", r)
+    return r
+
 def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, seed_resize_from_h=0, seed_resize_from_w=0, p=None):
     xs = []
 
@@ -197,19 +220,19 @@ def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, see
         if subseeds is not None:
             subseed = 0 if i >= len(subseeds) else subseeds[i]
 
-            subnoise = devices.randn(subseed, noise_shape)
+            subnoise = random_generator(subseed, noise_shape, p)
 
         # randn results depend on device; gpu and cpu get different results for same seed;
         # the way I see it, it's better to do this on CPU, so that everyone gets same result;
         # but the original script had it like this, so I do not dare change it for now because
         # it will break everyone's seeds.
-        noise = devices.randn(seed, noise_shape)
+        noise = random_generator(seed, noise_shape, p)
 
         if subnoise is not None:
             noise = slerp(subseed_strength, noise, subnoise)
 
         if noise_shape != shape:
-            x = devices.randn(seed, shape)
+            x = random_generator(seed, shape, p)
             dx = (shape[2] - noise_shape[2]) // 2
             dy = (shape[1] - noise_shape[1]) // 2
             w = noise_shape[2] if dx >= 0 else noise_shape[2] + 2 * dx

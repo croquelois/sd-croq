@@ -314,12 +314,25 @@
       }
   }
   
+  function applySnapToGrid(p){
+    if(!snapToGrid){
+      let x = Math.floor(p.x);
+      let y = Math.floor(p.y);
+      return {x,y}
+    }
+    const gridSize = 128;
+    let mx = canvasWidth/2;
+    let my = canvasHeight/2;
+    let x = mx+Math.round((p.x-mx)/gridSize)*gridSize;
+    let y = my+Math.round((p.y-my)/gridSize)*gridSize;
+    return {x,y}
+  }
+  
   async function mainLoop() {
       if (refresh || mouse.button) {
           refresh = false;
           if(!images.length && mouse.button && !isDrawMyMaskMode){
-            let x = Math.floor(mouse.x);
-            let y = Math.floor(mouse.y);
+            let {x,y} = applySnapToGrid(mouse);
             rect = {
               x1: x - width/2,
               y1: y - height/2,
@@ -350,14 +363,19 @@
     let maskNames = ["L","R","U","D","LU","LD","RU","RD","LUD","LUR","LDR","RUD","LUDR"];
     maskImages = await Promise.all(maskNames.map(async name => ({name, img: await drawGradientImage(name,false, width, height)})));
     emptyInitialCanvas();
-    drawImageInTheMiddle("working.png", {width:512,height:512});
+    //drawImageInTheMiddle("working.png", {width:512,height:512});
     rect = {
       x1: canvasWidth/2 - 512/2,
-      y1: height - 512/2,
-      x2: canvasWidth + 512/2,
-      y2: height + 512/2,
+      y1: canvasHeight/2 - 512/2,
+      x2: canvasWidth/2 + 512/2,
+      y2: canvasHeight/2 + 512/2,
     };
   });
+  
+  let snapToGrid = false;
+  function onSnapToGrid(){
+    snapToGrid = !snapToGrid;
+  }
 </script>
 
 
@@ -416,6 +434,11 @@
     </div>
   </div>
   <div >
+    <div>
+      <button class="btn btn-danger" type="button" on:click={emptyInitialCanvas}>clear canvas</button>
+      <button class="btn btn-info" type="button" on:click={onSnapToGrid}>{snapToGrid?"un":""}snap to grid</button>
+    </div>
+    
     <div >
       {#each maskImages as mask (mask.name)}
         <img width=64 height=64 src={mask.img} class="imgBorder" 

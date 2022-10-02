@@ -6,6 +6,8 @@
   import Images from './Images.svelte';
   import { params } from './paramsStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
+  import {shallowCopy} from './utils.js';
+  import {getDetailFromUrl} from './detailMgmtUtils.js';
   
   let prompt = "";
   let negativePrompt = "";
@@ -24,8 +26,7 @@
   let denoiserStrength = 0.63;
   
   let inputImageUrl = null;
-  let images = [];
-  let seeds = null;
+  let details = [];
   
   let actionText = "Generate";
   let actionDisabled = false;
@@ -33,7 +34,6 @@
   let jobStatus = null;
   
   function feedback(status){
-    console.log("feedback", status);
     jobStatus = status;
   }
   
@@ -80,18 +80,19 @@
       jobStatus = {status:"Starting"};
       waitImage = "working.png";
       actionText = "Cancel";
+      let params = getAllParams();
+      details = [];
       let resImage = await fetch(inputImageUrl);
       let image = await resImage.blob();
-      let res = await generate(getAllParams(), image, null, feedback);
-      images = res.images || [];
-      if (res.opt && res.opt.seed !== undefined && res.opt.seed !== null) {
-        if (res.opt.nbLoopback > 0 && res.opt.saveLoopback == true) {
-          seeds = images.map((img,i) => res.opt.seed + Math.floor(i/res.opt.nbLoopback));
-        } else {
-          seeds = images.map((img,i) => res.opt.seed + i);
-        }
-      } else {
-        seeds = null;
+      let res = await generate(params, image, null, feedback);
+      if(res.images){
+        let initSeed = (res.opt && res.opt.seed);
+        details = res.images.map((image,i) => {
+          let p = shallowCopy(params);
+          if(initSeed != null)
+            p.seed = initSeed + i;
+          return {params: p, image};
+        });
       }
       waitImage = res.status == "error" ? "error.png" : null;
       actionDisabled = false;
@@ -128,6 +129,29 @@
   }
   function onDelete(){
     inputImageUrl = null;
+  }
+  
+  function send(event, where){
+    let url = (typeof event == "string" ? event : event.detail.image);
+    where = where || event.detail.where;
+    if(where == "img2img"){
+      inputImageUrl = url;
+      return;
+    }
+    let detail = getDetailFromUrl(details, url);
+    let p = shallowCopy(detail.params);
+    p.inputImageUrl = url;
+    params.set(p);
+    window.location.hash = where;
+  }
+  
+  function save(event){
+    let url = (typeof event == "string" ? event : event.detail.image);
+    let detail = getDetailFromUrl(details, url);
+    let p = shallowCopy(detail.params);
+    p.url = url;
+    historyStore.append(p);
+    window.location.hash = "history";
   }
 </script>
 
@@ -166,7 +190,9 @@
           {#if waitImage}
             <img src={waitImage}>
           {:else}
-            <Images images={images} seeds={seeds}/>
+            <Images details={details} on:send={send} on:save={save} 
+              actions={["copy seed", "to img2img", "to canvas", "history"]}
+            />
           {/if}
         </div>
       </div>
