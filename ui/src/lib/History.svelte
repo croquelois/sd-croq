@@ -2,6 +2,8 @@
   import { historyStore } from './historyStore.js';
   import InputText from './InputText.svelte';
   import { onMount } from 'svelte';
+  import { paramsImg2Img, paramsTxt2Img } from './paramsStore.js';
+  
   let history = [];
   historyStore.subscribe(h => history = h.reverse());
   let user;
@@ -68,6 +70,9 @@
   }
   function backToOrigin(event){
     let url = event.target.dataset.url;
+    let info = history.find(h => h.url == url);
+    paramsTxt2Img.set(info);
+    window.location.hash = "txt2img";
   }
   refresh();
   

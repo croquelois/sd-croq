@@ -4,7 +4,7 @@
   import ParametersCardImg2Img from './ParametersCardImg2Img.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
-  import { params } from './paramsStore.js';
+  import { paramsImg2Img, paramsCanvas } from './paramsStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
   import {shallowCopy} from './utils.js';
   import {getDetailFromUrl} from './detailMgmtUtils.js';
@@ -73,7 +73,7 @@
     if(p.inputImageUrl)
       inputImageUrl = p.inputImageUrl;
   }
-  params.subscribe(setAllParams);
+  paramsImg2Img.subscribe(setAllParams);
   
   async function action(){
     if (actionText == "Generate") {
@@ -141,7 +141,7 @@
     let detail = getDetailFromUrl(details, url);
     let p = shallowCopy(detail.params);
     p.inputImageUrl = url;
-    params.set(p);
+    paramsCanvas.set(p);
     window.location.hash = where;
   }
   

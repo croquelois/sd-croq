@@ -3,7 +3,6 @@
   import ParametersCard from './ParametersCard.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
-  import { params } from './paramsStore.js';
   import { historyStore } from './historyStore.js';
   import {generate, interpolateRequest, cancelRequest} from './backendLogic.js'
   import InputText from './InputText.svelte';

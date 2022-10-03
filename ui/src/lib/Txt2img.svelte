@@ -3,7 +3,7 @@
   import ParametersCard from './ParametersCard.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
-  import { params } from './paramsStore.js';
+  import { paramsCanvas, paramsImg2Img, paramsTxt2Img } from './paramsStore.js';
   import { historyStore } from './historyStore.js';
   import {generate, interpolateRequest, cancelRequest} from './backendLogic.js'
   import InputText from './InputText.svelte';
@@ -54,6 +54,36 @@
     return p;
   }
   
+  function setAllParams(p){
+    if(p.prompt)
+      prompt = p.prompt;
+    if(p.negativePrompt)
+      negativePrompt = p.negativePrompt;
+    if(p.width)
+      width = p.width;
+    if(p.height)
+      height = p.height;
+    if(p.classifierStrength)
+      classifierStrength = p.classifierStrength;
+    if(p.seed)
+      seed = p.seed;
+    if(p.subseed)
+      subseed = p.subseed;
+    if(p.subseedStrength)
+      subseedStrength = p.subseedStrength;
+    if(p.nbImages)
+      nbImages = p.nbImages;
+    if(p.samplingSteps)
+      samplingSteps = p.samplingSteps;
+    if(p.samplingMethod)
+      samplingMethod = p.samplingMethod;
+    if(p.restoreFaces)
+      restoreFaces = p.restoreFaces;
+    if(p.tiling)
+      tiling = p.tiling;
+  }
+  paramsTxt2Img.subscribe(setAllParams);
+  
   async function action(){
     if (actionText == "Generate") {
       jobStatus = {status:"Starting"};
@@ -89,7 +119,10 @@
     let detail = getDetailFromUrl(details, url);
     let p = shallowCopy(detail.params);
     p.inputImageUrl = url;
-    params.set(p);
+    if(where == "img2img")
+      paramsImg2Img.set(p);
+    else if(where == "canvas")
+      paramsCanvas.set(p);
     window.location.hash = where;
   }
   

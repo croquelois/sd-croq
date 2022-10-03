@@ -4,7 +4,7 @@
   import ParametersCardImg2Img from './ParametersCardImg2Img.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
-  import { params } from './paramsStore.js';
+  import { paramsCanvas } from './paramsStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
   import InputNumber from './InputNumber.svelte';
   import { onMount } from 'svelte';
@@ -266,7 +266,7 @@
     currentCanvasImage = await loadImage(canvas.toDataURL());
     setRefresh();
   }
-  params.subscribe(p => drawImageInTheMiddle(p.inputImageUrl,p));
+  paramsCanvas.subscribe(p => drawImageInTheMiddle(p.inputImageUrl,p));
   
   let transparentPattern = null;
   function drawTransparentPattern(ctx){
