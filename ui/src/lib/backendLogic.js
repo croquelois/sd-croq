@@ -2,6 +2,7 @@ import {txt2img, img2img, checkResult, faceCorrection, upscale, interrogate, int
 import {sleep} from './utils.js'
 
 let cancelling = false;
+let pendingReqId = null;
 
 async function activeWaitLoop(id, feedback){
   console.log("request id", id);
@@ -26,6 +27,7 @@ async function activeWaitLoop(id, feedback){
 export async function generate(opt, image, mask, feedback){
   console.log("generate", opt);
   let res;
+  pendingReqId = null; //@@CROQ@@ the request id would be better one step upper
   if(image)
     res = await img2img(opt, image, mask);
   else
@@ -34,6 +36,7 @@ export async function generate(opt, image, mask, feedback){
     console.log(res);
     return res;
   }
+  pendingReqId = res.id;
   return await activeWaitLoop(res.id, feedback);
 }
 
@@ -79,5 +82,5 @@ export async function interrogateRequest(image, feedback){
 
 export async function cancelRequest(){
   cancelling = true;
-  cancel();
+  cancel(pendingReqId);
 }

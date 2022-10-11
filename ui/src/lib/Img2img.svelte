@@ -4,6 +4,7 @@
   import ParametersCardImg2Img from './ParametersCardImg2Img.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
+  import { historyStore } from './historyStore.js';
   import { paramsImg2Img, paramsCanvas } from './paramsStore.js';
   import {generate, cancelRequest} from './backendLogic.js'
   import {shallowCopy} from './utils.js';

@@ -1,6 +1,7 @@
 <script>
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
+  import { paramsLab } from './paramsStore.js';
   import {cancelRequest, faceCorrectionRequest, upscaleRequest, interrogateRequest} from './backendLogic.js'
     
   let inputImageUrl = null;
@@ -18,6 +19,12 @@
     console.log("feedback", status);
     jobStatus = status;
   }
+  
+  function setAllParams(p){
+    if(p.inputImageUrl)
+      inputImageUrl = p.inputImageUrl;
+  }
+  paramsLab.subscribe(setAllParams);
   
   async function correctFace(){
     if(correctFaceBtnText == "Correct Face") {
@@ -159,7 +166,7 @@
           disabled={actionDisabled || !inputImageUrl || (currentAction && currentAction != "Correct Face")} 
           on:click={correctFace}>{correctFaceBtnText}</button>
     <button type="button" class="btn btn-primary mt-1"
-          disabled={actionDisabled || !inputImageUrl || (currentAction && currentAction != "Upscale") || true}
+          disabled={actionDisabled || !inputImageUrl || (currentAction && currentAction != "Upscale")}
           on:click={upscale}>{upscaleBtnText}</button>
     <div class="input-group mt-1">
       <button class="btn btn-primary" type="button"

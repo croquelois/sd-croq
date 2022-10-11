@@ -6,8 +6,9 @@
   import Lab from './lib/Lab.svelte';
   import History from './lib/History.svelte';
   import Interpolator from './lib/Interpolator.svelte';
+  import Admin from './lib/Admin.svelte';
   
-  let tabs = ["txt2img", "img2img", "interpolator", "canvas", "lab", "history"];
+  let tabs = ["txt2img", "img2img", "interpolator", "canvas", "lab", "history", "admin"];
   
   let tab = "txt2img";
   function routeTab(){
@@ -48,14 +49,17 @@
     <div class="tab-pane fade" class:show={tab == "interpolator"} class:active={tab == "interpolator"} role="tabpanel" tabindex="2">
       <Interpolator />
     </div>
-    <div class="tab-pane fade" class:show={tab == "canvas"} class:active={tab == "canvas"} role="tabpanel" tabindex="2">
+    <div class="tab-pane fade" class:show={tab == "canvas"} class:active={tab == "canvas"} role="tabpanel" tabindex="3">
       <Canvas />
     </div>
-    <div class="tab-pane fade" class:show={tab == "lab"} class:active={tab == "lab"} role="tabpanel" tabindex="2">
+    <div class="tab-pane fade" class:show={tab == "lab"} class:active={tab == "lab"} role="tabpanel" tabindex="4">
       <Lab />
     </div>
-    <div class="tab-pane fade" class:show={tab == "history"} class:active={tab == "history"} role="tabpanel" tabindex="3">
+    <div class="tab-pane fade" class:show={tab == "history"} class:active={tab == "history"} role="tabpanel" tabindex="5">
       <History />
+    </div>
+    <div class="tab-pane fade" class:show={tab == "admin"} class:active={tab == "admin"} role="tabpanel" tabindex="6">
+      <Admin />
     </div>
   </div>
 </main>

@@ -3,10 +3,14 @@ import jsonpickle, json
 from PIL import Image
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
+import os, shutil
 
 from modules.worker import add_request_to_queue, get_request, cancel_request
 from modules.ProcessOptions import ProcessOptions
 from modules import UserDatabase
+from modules import sd_models, shared
+
+# nvidia-smi --query-gpu=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 5
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -47,6 +51,16 @@ def faceCorrection():
     add_request_to_queue(response, image)
     return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
 
+@app.route('/upscale', methods=['POST'])
+@cross_origin()
+def upscale():
+    image = Image.open(request.files['image'])
+    image.load()
+    opt = json.loads(request.form.get('data',"{}"))
+    response = {'action': 'upscale', 'status': 'pending', 'id': str(uuid.uuid4()), 'opt': opt};
+    add_request_to_queue(response, image)
+    return Response(response=jsonpickle.encode(response), status=200, mimetype="application/json")
+    
 @app.route('/interrogate', methods=['POST'])
 @cross_origin()
 def interrogate():
@@ -117,5 +131,36 @@ def dbDelete(user, url):
 def dbRead(user):
     data = UserDatabase.load(user)
     return Response(response=jsonpickle.encode({'status': 'ok', 'data': data}), status=200, mimetype="application/json")
+
+@app.route('/admin/clean')
+@cross_origin()
+def adminClean():
+    fileToKeep = []
+    users = UserDatabase.listUsers()
+    for user in users:
+        data = UserDatabase.load(user)
+        fileToKeep = fileToKeep + [h["url"] for h in data]
+    #os.makedirs("backup", exist_ok=True)
+    #for file in fileToKeep:
+    #    shutil.copy("static/"+file,"backup/"+file);
+    fileToKeep = set(fileToKeep)
+    for file in os.listdir("static"):
+        if not file in fileToKeep:
+            os.remove("static/" + file)
+    return Response(response=jsonpickle.encode({'status': 'ok'}), status=200, mimetype="application/json")
+
+@app.route('/admin/models')
+@cross_origin()
+def models():
+    titles = [info.title for info in sd_models.checkpoints_list.values()]
+    model = shared.opts.sd_model_checkpoint
+    return Response(response=jsonpickle.encode({'status': 'ok', 'list': titles, 'model': model}), status=200, mimetype="application/json")
+
+@app.route('/admin/models', methods=['POST'])
+@cross_origin()
+def setModel():
+    shared.opts.sd_model_checkpoint = request.json["name"]
+    sd_models.reload_model_weights(shared.sd_model)
+    return Response(response=jsonpickle.encode({'status': 'ok'}), status=200, mimetype="application/json")
 
 app.run(host="127.0.0.1", port=5001)

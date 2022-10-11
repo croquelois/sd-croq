@@ -27,9 +27,13 @@ class ProcessOptions:
         self.seed = seed_to_int(json.get("seed")) # F+B
         self.subseed = seed_to_int(json.get("subseed")) # F+B
         self.subseed_strength = json.get("subseedStrength", 0.0) # F+B
-        self.seed_resize_from_h = json.get("seedResizeFromH", 0) # B
-        self.seed_resize_from_w = json.get("seedResizeFromW", 0) # B
-        self.scaleNoise = json.get("scaleNoise", False) # B
+        seed_resize = json.get("resizeSeed", False)
+        if seed_resize:
+            self.seed_resize_from_h = 512
+            self.seed_resize_from_w = 512
+        else:
+            self.seed_resize_from_h = json.get("seedResizeFromH", 0) # B
+            self.seed_resize_from_w = json.get("seedResizeFromW", 0) # B
         self.batch_size = json.get("batchSize", 1) # B
         self.restore_faces = json.get("restoreFaces", False) # B+F
         self.saveLoopback = json.get("saveLoopback", False) # F

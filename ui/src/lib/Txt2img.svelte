@@ -3,7 +3,7 @@
   import ParametersCard from './ParametersCard.svelte';
   import JobStatus from './JobStatus.svelte';
   import Images from './Images.svelte';
-  import { paramsCanvas, paramsImg2Img, paramsTxt2Img } from './paramsStore.js';
+  import { paramsCanvas, paramsImg2Img, paramsTxt2Img, paramsLab } from './paramsStore.js';
   import { historyStore } from './historyStore.js';
   import {generate, interpolateRequest, cancelRequest} from './backendLogic.js'
   import InputText from './InputText.svelte';
@@ -25,6 +25,7 @@
   let samplingMethod = "DDIM";
   let restoreFaces = false;
   let tiling = false;
+  let resizeSeed = false;
   
   // Experimental
   let experimental = false
@@ -45,7 +46,7 @@
   }
   
   function getAllParams(){
-    let p = {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling};
+    let p = {prompt, negativePrompt, width, height, classifierStrength, seed, subseed, subseedStrength, nbImages, samplingSteps, samplingMethod, restoreFaces, tiling, resizeSeed};
     if(experimental){
       p.perlinStrength = perlinStrength;
       p.perlinOctave = perlinOctave;
@@ -81,6 +82,8 @@
       restoreFaces = p.restoreFaces;
     if(p.tiling)
       tiling = p.tiling;
+    if(p.resizeSeed)
+      resizeSeed = p.resizeSeed;
   }
   paramsTxt2Img.subscribe(setAllParams);
   
@@ -121,6 +124,8 @@
     p.inputImageUrl = url;
     if(where == "img2img")
       paramsImg2Img.set(p);
+    if(where == "lab")
+      paramsLab.set(p);
     else if(where == "canvas")
       paramsCanvas.set(p);
     window.location.hash = where;
@@ -172,7 +177,7 @@
       viewModeName = "Carousel";
   }
   
-  let optionsGridAction = ["Regenerate", "Fullscreen", "Send to img2img", "Send to history"];
+  let optionsGridAction = ["Regenerate", "Fullscreen", "Send to img2img", "Send to lab", "Send to history"];
   let currentGridAction = optionsGridAction[0];
   
   function onGridAction(event){
@@ -181,6 +186,8 @@
       return regenerateImage(url);
     if(currentGridAction == "Send to img2img")
       return send(url, "img2img");
+    if(currentGridAction == "Send to lab")
+      return send(url, "lab");
     if(currentGridAction == "Send to history")
       return save(url);
   }
@@ -208,6 +215,7 @@
         bind:samplingMethod={samplingMethod}
         bind:restoreFaces={restoreFaces}
         bind:tiling={tiling}
+        bind:resizeSeed={resizeSeed}
       />
       {#if experimental}
         <InputNumber title="perlin strength" bind:value={perlinStrength} />
@@ -224,7 +232,7 @@
             <img src={waitImage || "success.png"}>
           {:else}
             <Images details={details} on:send={send} on:save={save} on:regenerate={regenerateImage}
-              actions={["copy seed", "regenerate", "to img2img", "to canvas", "history"]}
+              actions={["copy seed", "regenerate", "to img2img", "to canvas", "to lab", "history"]}
             />
           {/if}
           

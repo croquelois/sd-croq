@@ -18,12 +18,8 @@ no not the picture above, but the code in this repo !
 
 - install the original https://github.com/CompVis/stable-diffusion
 - activate it in anaconda
+- call launch.py
 - install the missing stuff via pip (flask, flask_cors, perhaps some other stuff)
-- create `repositories` directory with the following repo inside:
-- stable-diffusion: https://github.com/CompVis/stable-diffusion
-- taming-transformers: https://github.com/CompVis/taming-transformers
-- CodeFormer: https://github.com/sczhou/CodeFormer
-- BLIP: https://github.com/salesforce/BLIP
 - once everything is installed you can launch with `sd-croq.cmd` or `python main.py`
 
 ## Front end

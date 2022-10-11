@@ -18,6 +18,7 @@
   export let samplingMethod = "DDIM";
   export let restoreFaces = false;
   export let tiling = false;
+  export let resizeSeed = false;
   
   export let hide = [];
 </script>
@@ -25,10 +26,10 @@
 <div class="card">
   <div class="card-body">
   {#if hide.indexOf("width") == -1}
-    <InputRange title="width" min=64 max=1024 step=64 bind:value={width} />
+    <InputRange title="width" min=64 max=2048 step=64 bind:value={width} />
   {/if}
   {#if hide.indexOf("height") == -1}
-    <InputRange title="height" min=64 max=1024 step=64 bind:value={height} />
+    <InputRange title="height" min=64 max=2048 step=64 bind:value={height} />
   {/if}
   {#if hide.indexOf("classifierStrength") == -1}
     <InputRange title="classifier strength" min=0 max=30 step=0.5 bind:value={classifierStrength} />
@@ -57,5 +58,9 @@
   {#if hide.indexOf("tiling") == -1}
     <InputCheckbox title="Tiling" bind:value={tiling} />
   {/if}
+  {#if hide.indexOf("resizeSeed") == -1}
+    <InputCheckbox title="Resize Seed" bind:value={resizeSeed} />
+  {/if}
+  
   </div>
 </div>

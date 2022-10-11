@@ -10,12 +10,52 @@ import numpy as np
 import k_diffusion as K
 from PIL import Image, ImageFilter, ImageOps, ImageChops
 
+
+from modules import devices, sd_samplers
+import modules.codeformer_model as codeformer
+#import modules.extras
+import modules.face_restoration
+import modules.gfpgan_model as gfpgan
+#import modules.img2img
+
+import modules.lowvram
+import modules.paths
+#import modules.scripts
+import modules.sd_hijack
+import modules.sd_models
+import modules.shared as shared
+#import modules.txt2img
+
+from modules import devices
+from modules import modelloader
+from modules.paths import script_path
+from modules.shared import cmd_opts
+import modules.hypernetworks.hypernetwork
+
 from modules.devices import torch_gc
-from modules import random_utils, UserDatabase, ProcessOptions, shared, sd_models, misc, gfpgan_model
-from modules.ProcessOptions import ProcessOptions, seed_to_int
-from modules.shared import opts as globalOpts, cmd_opts
+
+modules.sd_models.list_models()
+modelloader.cleanup_models()
+modules.sd_models.setup_model()
+codeformer.setup_model(cmd_opts.codeformer_models_path)
+gfpgan.setup_model(cmd_opts.gfpgan_models_path)
+shared.face_restorers.append(modules.face_restoration.FaceRestoration())
+modelloader.load_upscalers()
+
+from modules import UserDatabase, misc
+from modules.ProcessOptions import seed_to_int
 from modules.processing import StableDiffusionProcessing, Processed, StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img, process_images
 from modules.sd_samplers import samplers, samplers_for_img2img
+
+from modules.shared import opts as globalOpts, cmd_opts
+from modules.croqShared import image_path
+
+### CROQ: to silence tqdm
+#import tqdm
+#from functools import partialmethod
+#tqdm.tqdm.__init__ = partialmethod(tqdm.tqdm.__init__, disable=True)
+
+print([u.name for u in shared.sd_upscalers])
 
 memImage = {}
 memMask = {}
@@ -37,14 +77,20 @@ def getSamplerIndex(sampler, isImg2Img = False):
         raise Exception("Unknown sampler: " + sampler)
     return sampler_indices[0]
 
+def getUpscaler(name):
+    upscalers = [u for u in shared.sd_upscalers if u.name == name]
+    if len(upscalers) == 0:
+        raise Exception("Unknown upscaler: " + name)
+    return upscalers[0]
+
 def saveImage(image):
     filename = str(uuid.uuid4()) + ".png"
-    image.save(os.path.join(shared.cmd_opts.image_path, filename))
+    image.save(os.path.join(image_path, filename))
     return filename
     
 def saveVideo(images, frameRate, size):
     filename = str(uuid.uuid4()) + ".webm"
-    out = cv2.VideoWriter(os.path.join(shared.cmd_opts.image_path, filename), cv2.VideoWriter_fourcc(*'VP80'), frameRate, size)
+    out = cv2.VideoWriter(os.path.join(image_path, filename), cv2.VideoWriter_fourcc(*'VP80'), frameRate, size)
     for img in images:
         out.write(np.array(img)[:, :, ::-1])
     out.release()
@@ -93,8 +139,6 @@ def start_worker():
                     outpath_samples=globalOpts.outdir_samples or globalOpts.outdir_txt2img_samples,
                     outpath_grids=globalOpts.outdir_grids or globalOpts.outdir_txt2img_grids,
                     prompt=prevStep["prompt"],
-                    prompt2=step["prompt"],
-                    prompt2_strength=a,
                     styles=[],
                     negative_prompt="",
                     seed=prevStep["seed"],
@@ -112,6 +156,8 @@ def start_worker():
                     restore_faces=False,
                     tiling=opt["tiling"],
                 )
+                p.prompt2=step["prompt"]
+                p.prompt2_strength=a
                 processed = process_images(p)
                 shared.total_tqdm.clear()
                 images.append(processed.images[0])
@@ -214,9 +260,20 @@ def start_worker():
 
     def process_face_correction(image):
         image = image.convert("RGB")
-        corrected_img = modules.face_restoration.restore_faces(np.array(image, dtype=np.uint8))
+        corrected_img = face_restoration.restore_faces(np.array(image, dtype=np.uint8))
         filename = str(uuid.uuid4()) + ".png"
-        Image.fromarray(corrected_img).save(os.path.join(shared.cmd_opts.image_path, filename))
+        Image.fromarray(corrected_img).save(os.path.join(image_path, filename))
+        return filename
+        
+    def process_upscale(item, image):
+        image = image.convert("RGB")
+        opt = item.get("opt", {})
+        name = opt.get("name", "BSRGAN")
+        factor = opt.get("factor", 4)
+        upscaler = getUpscaler(name)
+        upscale_img = upscaler.scaler.upscale(image, factor, upscaler.data_path)
+        filename = str(uuid.uuid4()) + ".png"
+        upscale_img.save(os.path.join(image_path, filename))
         return filename
 
     def process_interrogate(image):
@@ -224,7 +281,7 @@ def start_worker():
 
     def worker():
         global workQueue, allRequests, memImage
-        shared.sd_model = sd_models.load_model()
+        shared.sd_model = modules.sd_models.load_model()
         while(True):
             print(f'Wait for item')
             itemId = workQueue.get()
@@ -250,6 +307,9 @@ def start_worker():
                 elif item["action"] == "faceCorrection":
                     shared.state.job_count = 1;
                     item["images"] = [process_face_correction(image)]
+                elif item["action"] == "upscale":
+                    shared.state.job_count = 1;
+                    item["images"] = [process_upscale(item, image)]
                 elif item["action"] == "img2img":
                     shared.state.job_count = item["opt"].n_iter;
                     item["images"] = process_img2img(item, image, mask)

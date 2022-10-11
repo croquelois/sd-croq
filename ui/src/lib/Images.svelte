@@ -33,6 +33,9 @@
   function sendToCanvas(){
     dispatch('send', {where: "canvas", ...(details[current])});
   }
+  function sendToLab(){
+    dispatch('send', {where: "lab", ...(details[current])});
+  }
   function save(){
     alreadySaved = true;
     dispatch('save', details[current]);
@@ -81,6 +84,9 @@
     {/if}
     {#if actions.indexOf("to canvas") != -1}
       <button type="button" class="btn btn-outline-primary" on:click={sendToCanvas}>To canvas</button>
+    {/if}
+    {#if actions.indexOf("to lab") != -1}
+      <button type="button" class="btn btn-outline-primary" on:click={sendToLab}>To lab</button>
     {/if}
     {#if actions.indexOf("history") != -1}
       <button type="button" class="btn btn-outline-primary" disabled={alreadySaved} on:click={save}>To history</button>

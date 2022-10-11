@@ -140,3 +140,25 @@ export async function dbUserUpdate(user, data){
   xhr.send(JSON.stringify(data));
   return addBackendUrlToHistory(await promiseOnAjaxReturn(xhr));
 }
+
+export async function adminClean(){
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", backendUrl+"/admin/clean");
+  xhr.send();
+  return await promiseOnAjaxReturn(xhr);
+}
+
+export async function getModels(){
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", backendUrl+"/admin/models");
+  xhr.send();
+  return await promiseOnAjaxReturn(xhr);
+}
+
+export async function setModel(name){
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", backendUrl+"/admin/models");
+  xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+  xhr.send(JSON.stringify({name}));
+  return await promiseOnAjaxReturn(xhr);
+}
